@@ -22,59 +22,98 @@ public class MainActivity extends Activity {
         Start, Shot, Run
     };
 
-    RaceState state = RaceState.Start;
+    enum BStopResetState {
+        Stop, Reset
+    };
 
+    RaceState state = RaceState.Start;
+    BStopResetState bState = BStopResetState.Reset;
+
+    private TextView vTextActivity;
     private LinearLayout vLayout;
-    private Chronometer vChronoRun;
-    private Chronometer vChronoShot;
+    private Chronometer vChronoTotal;
+    private Chronometer vChronoRunShot;
     private int lap = 0;
     private int shotMaxTime = 50;
-    private Button vButtonReset;
+    private Button vButtonStopReset;
     private Button vButtonRace;
     private List<TextView> l = new ArrayList<TextView>();
 
-    protected void switchChrono() {
-        switch(state){
-            case Start:
-                reset();
-                state = RaceState.Run;
-                vButtonRace.setText("Start Shot");
-                vChronoRun.start();
-                break;
-            case Run:
-                state = RaceState.Shot;
-                vButtonRace.setText("Start Run");
-                vChronoShot.setBase(SystemClock.elapsedRealtime());
-                vChronoShot.start();
-                vChronoRun.stop();
-                TextView vText = new TextView(vLayout.getContext());
-                String label = "";
-                if (lap == 0) {
-                    label = "Inital lap " + vChronoRun.getText();
-                } else {
-                    label = "Lap " + lap + " " + vChronoRun.getText();
-                }
-                lap++;
-                vText.setText(label);
-                l.add(vText);
-                vLayout.addView(vText);
-                break;
-            case Shot:
-                state= RaceState.Run;
-                vButtonRace.setText("Start Shot");
-                vChronoShot.stop();
-                vChronoRun.start();
-                break;
+    protected void setButtonStopReset(BStopResetState state) {
+        vButtonStopReset.setText(state.toString());
+        bState = state;
+    }
+
+    protected void addTimeView(CharSequence text) {
+        TextView vText = new TextView(vLayout.getContext());
+        vText.setText(text);
+        l.add(vText);
+        vLayout.addView(vText);
+    }
+
+    protected void updateTimeView(CharSequence text) {
+        TextView lastText = l.get(l.size() - 1);
+        lastText.setText(lastText.getText() + " " + text);
+
+    }
+
+    protected void switchRaceState() {
+        CharSequence time;
+        switch (state) {
+        case Start:
+            reset();
+            vButtonRace.setText("Start Shot");
+            vTextActivity.setText("Running time");
+            setButtonStopReset(BStopResetState.Stop);
+            vChronoTotal.start();
+            vChronoRunShot.start();
+            state = RaceState.Run;
+            break;
+
+        case Run:
+            time = getTimeRestart();
+
+            if (lap == 0) {
+                addTimeView("Inital lap " + time);
+            } else {
+                updateTimeView("Lap " + lap + " " + time);
+            }
+            lap++;
+
+            vButtonRace.setText("Start Run");
+            vTextActivity.setText("Shooting time");
+            state = RaceState.Shot;
+            break;
+
+        case Shot:
+            time = getTimeRestart();
+            addTimeView("Shot serie " + lap + " " + time);
+
+            vButtonRace.setText("Start Shot");
+            vTextActivity.setText("Running time");
+            state = RaceState.Run;
+            break;
         }
 
     }
 
+    private CharSequence getTimeRestart() {
+        CharSequence time;
+        time = vChronoRunShot.getText();
+        vChronoRunShot.setBase(SystemClock.elapsedRealtime());
+        vChronoRunShot.start();
+        return time;
+    }
+
     protected void reset() {
-        vChronoRun.stop();
-        vChronoRun.setBase(SystemClock.elapsedRealtime());
-        vChronoShot.stop();
-        vChronoShot.setBase(SystemClock.elapsedRealtime());
+        vChronoTotal.stop();
+        vChronoTotal.setBase(SystemClock.elapsedRealtime());
+        vChronoRunShot.stop();
+        vChronoRunShot.setBase(SystemClock.elapsedRealtime());
         state = RaceState.Start;
+        bState = BStopResetState.Reset;
+        vButtonRace.setText("Start Run");
+        vButtonRace.setEnabled(true);
         lap = 0;
         shotMaxTime = 50;
         // Clear laps
@@ -91,39 +130,66 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        vTextActivity = (TextView) findViewById(R.id.Activity);
 
         vLayout = (LinearLayout) findViewById(R.id.LinearLayout1);
 
-        vChronoRun = (Chronometer) findViewById(R.id.chronometer1);
+        vChronoTotal = (Chronometer) findViewById(R.id.chronometer1);
 
-        vChronoShot = (Chronometer) findViewById(R.id.chronometer2);
-        vChronoShot
+        vChronoRunShot = (Chronometer) findViewById(R.id.chronometer2);
+        vChronoRunShot
                 .setOnChronometerTickListener(new OnChronometerTickListener() {
 
                     @Override
                     public void onChronometerTick(Chronometer chronometer) {
-                        if (shotMaxTime <= 0) {
-                            shotMaxTime = 50;
-                            switchChrono();
-                        } else {
-                            shotMaxTime--;
+                        if (state == RaceState.Shot) {
+                            if (shotMaxTime < 0) {
+                                shotMaxTime = 50;
+                                switchRaceState();
+                                // Play alarm
+                            } else {
+                                shotMaxTime--;
+                            }
                         }
 
                     }
                 });
 
-        vButtonReset = (Button) findViewById(R.id.ButtonReset);
-        vButtonReset.setOnClickListener(new Button.OnClickListener() {
+        vButtonStopReset = (Button) findViewById(R.id.ButtonReset);
+        vButtonStopReset.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                reset();
+                switch (bState) {
+                case Reset:
+                    reset();
+                    break;
+
+                case Stop:
+                    vChronoRunShot.stop();
+                    vChronoTotal.stop();
+                    if (lap == 0) {
+                        addTimeView("Inital lap " + vChronoRunShot.getText());
+                    } else {
+                        if (state == RaceState.Run) {
+                            updateTimeView("Lap " + lap + " "
+                                    + vChronoRunShot.getText());
+                        } else {
+                            addTimeView("Shot serie " + lap + " "
+                                    + vChronoRunShot.getText());
+                        }
+                    }
+                    addTimeView("Total time " + vChronoTotal.getText());
+                    setButtonStopReset(BStopResetState.Reset);
+                    vButtonRace.setEnabled(false);
+                    break;
+                }
             }
         });
 
-        vButtonRace= (Button) findViewById(R.id.ButtonRace);
+        vButtonRace = (Button) findViewById(R.id.ButtonRace);
         vButtonRace.setText("Start Run");
         vButtonRace.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                switchChrono();
+                switchRaceState();
             }
         });
     }
