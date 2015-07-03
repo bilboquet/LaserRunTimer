@@ -7,5 +7,6 @@
     <string name="ChronoShotLabel">Chrono Shot</string>
     <string name="LapTimes">Laps</string>
     <string name="ButtonReset">Reset</string>
+    <string name="buttonrace">ButtonRace</string>
 
 </resources>
