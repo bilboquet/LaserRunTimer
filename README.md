@@ -11,4 +11,4 @@ This application aim to provide help for people who'd like to practice in this d
 
 ## Usage
 Two buttons allow the control of the timers. The first button allows to switch between shooting and running phases. The second allows to stop (/!\ at the time restart is not supported) all the timers and reset them.
-A timeout of 50 second is actually set for shooting phase. When the time out is reached an alarm is played and the the timer is switched to running mode. 
+A timeout of 50 second is actually set for shooting phase. When the time out is reached an alarm is played, a visual notification displayed and the the timer is switched to running mode. 

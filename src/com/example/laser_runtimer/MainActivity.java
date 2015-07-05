@@ -3,7 +3,7 @@ package com.example.laser_runtimer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -19,6 +19,7 @@ import android.widget.Chronometer;
 import android.widget.Chronometer.OnChronometerTickListener;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
     enum RaceState {
@@ -42,6 +43,7 @@ public class MainActivity extends Activity {
     private Button vButtonRace;
     private List<TextView> l = new ArrayList<TextView>();
     private SoundGenerator alarm = new SoundGenerator();
+    private Toast notificationToast;
 
     protected void setButtonStopReset(BStopResetState state) {
         vButtonStopReset.setText(state.toString());
@@ -129,6 +131,7 @@ public class MainActivity extends Activity {
 
     }
 
+    @SuppressLint("ShowToast")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -151,6 +154,7 @@ public class MainActivity extends Activity {
                                 && elapsedTime >= shotMaxTime) {
                             chronometer.stop(); // to prevent new tick
                             alarm.play();
+                            notificationToast.show();
                             switchRaceState(); // let's run again
                         }
                     }
@@ -195,6 +199,9 @@ public class MainActivity extends Activity {
         });
 
         alarm.init();
+        notificationToast = Toast.makeText(MainActivity.this, "Run",
+                Toast.LENGTH_SHORT);
+        notificationToast.setDuration(2);
     }
 
     @Override
