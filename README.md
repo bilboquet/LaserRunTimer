@@ -7,6 +7,8 @@ A typical session consists of a short race for the start, then series of shootin
 In each series, the competitor must make a number of shooting before resuming his race. If he fails, he can start at the expiry of the time allotted for shooting (typically 50 s).
 
 ## Goal
-This application aim to provide help for people who'd like to practice in this discipline. It uses two timers, a general one which measures the running time, and one for shooting phases.
+This application aim to provide help for people who'd like to practice in this discipline. It uses two timers, a general one which measures the total time, and one for shooting/running phases.
 
-Currently, clicking on one of the two timers switches from racing mode to shooting mode. At the start of each shot, the total elapsed time is displayed.
+## Usage
+Two buttons allow the control of the timers. The first button allows to switch between shooting and running phases. The second allows to stop (/!\ at the time restart is not supported) all the timers and reset them.
+A timeout of 50 second is actually set for shooting phase. When the time out is reached an alarm is played and the the timer is switched to running mode. 

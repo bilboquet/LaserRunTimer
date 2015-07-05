@@ -37,7 +37,7 @@ public class MainActivity extends Activity {
     private Chronometer vChronoTotal;
     private Chronometer vChronoRunShot;
     private int lap = 0;
-    private int shotMaxTime = 50;
+    private static final int shotMaxTime = 50000; // 50s in millisecond
     private Button vButtonStopReset;
     private Button vButtonRace;
     private List<TextView> l = new ArrayList<TextView>();
@@ -119,7 +119,6 @@ public class MainActivity extends Activity {
         vButtonRace.setText("Start Run");
         vButtonRace.setEnabled(true);
         lap = 0;
-        shotMaxTime = 50;
         // Clear laps
         for (Iterator<TextView> i = l.iterator(); i.hasNext();) {
             TextView t = i.next();
@@ -146,17 +145,14 @@ public class MainActivity extends Activity {
 
                     @Override
                     public void onChronometerTick(Chronometer chronometer) {
-                        if (state == RaceState.Shot) {
-                            if (shotMaxTime < 0) {
-                                chronometer.stop(); //to prevent new tick
-                                shotMaxTime = 50;
-                                alarm.play();
-                                switchRaceState(); // let's run again
-                            } else {
-                                shotMaxTime--;
-                            }
+                        long elapsedTime = SystemClock.elapsedRealtime()
+                                - chronometer.getBase();
+                        if (state == RaceState.Shot
+                                && elapsedTime >= shotMaxTime) {
+                            chronometer.stop(); // to prevent new tick
+                            alarm.play();
+                            switchRaceState(); // let's run again
                         }
-
                     }
                 });
 
@@ -238,7 +234,8 @@ class SoundGenerator {
         });
         thread.start();
     }
-    void play () {
+
+    void play() {
         final Thread thread = new Thread(new Runnable() {
             public void run() {
                 playSound();
@@ -246,6 +243,7 @@ class SoundGenerator {
         });
         thread.start();
     }
+
     private void genTone() {
         // fill out the array
         for (int i = 0; i < numSamples; ++i) {
