@@ -5,6 +5,9 @@ import java.util.Iterator;
 import java.util.List;
 
 import android.app.Activity;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.Menu;
@@ -38,6 +41,7 @@ public class MainActivity extends Activity {
     private Button vButtonStopReset;
     private Button vButtonRace;
     private List<TextView> l = new ArrayList<TextView>();
+    private SoundGenerator alarm = new SoundGenerator();
 
     protected void setButtonStopReset(BStopResetState state) {
         vButtonStopReset.setText(state.toString());
@@ -144,9 +148,10 @@ public class MainActivity extends Activity {
                     public void onChronometerTick(Chronometer chronometer) {
                         if (state == RaceState.Shot) {
                             if (shotMaxTime < 0) {
+                                chronometer.stop(); //to prevent new tick
                                 shotMaxTime = 50;
-                                switchRaceState();
-                                // Play alarm
+                                alarm.play();
+                                switchRaceState(); // let's run again
                             } else {
                                 shotMaxTime--;
                             }
@@ -192,6 +197,8 @@ public class MainActivity extends Activity {
                 switchRaceState();
             }
         });
+
+        alarm.init();
     }
 
     @Override
@@ -212,4 +219,78 @@ public class MainActivity extends Activity {
         }
         return super.onOptionsItemSelected(item);
     }
+}
+
+class SoundGenerator {
+    private final int duration = 3; // seconds
+    private final int sampleRate = 8000;
+    private final int numSamples = duration * sampleRate;
+    private final double sample[] = new double[numSamples];
+    private final double freqOfTone = 880; // hz
+
+    private final byte generatedSnd[] = new byte[2 * numSamples];
+
+    void init() {
+        final Thread thread = new Thread(new Runnable() {
+            public void run() {
+                genTone();
+            }
+        });
+        thread.start();
+    }
+    void play () {
+        final Thread thread = new Thread(new Runnable() {
+            public void run() {
+                playSound();
+            }
+        });
+        thread.start();
+    }
+    private void genTone() {
+        // fill out the array
+        for (int i = 0; i < numSamples; ++i) {
+            // sample[i] = Math.sin(2 * Math.PI * i / (sampleRate/freqOfTone));
+            sample[i] = Math.sin((2 * Math.PI - .001) * i
+                    / (sampleRate / freqOfTone));
+        }
+
+        // convert to 16 bit pcm sound array
+        // assumes the sample buffer is normalised.
+        int idx = 0;
+        int ramp = numSamples / 20;
+
+        for (int i = 0; i < ramp; i++) {
+            // scale to maximum amplitude
+            final short val = (short) ((sample[i] * 32767) * i / ramp);
+            // in 16 bit wav PCM, first byte is the low order byte
+            generatedSnd[idx++] = (byte) (val & 0x00ff);
+            generatedSnd[idx++] = (byte) ((val & 0xff00) >>> 8);
+        }
+
+        for (int i = ramp; i < numSamples - ramp; i++) {
+            // scale to maximum amplitude
+            final short val = (short) ((sample[i] * 32767));
+            // in 16 bit wav PCM, first byte is the low order byte
+            generatedSnd[idx++] = (byte) (val & 0x00ff);
+            generatedSnd[idx++] = (byte) ((val & 0xff00) >>> 8);
+        }
+
+        for (int i = numSamples - ramp; i < numSamples; i++) {
+            // scale to maximum amplitude
+            final short val = (short) ((sample[i] * 32767) * (numSamples - i) / ramp);
+            // in 16 bit wav PCM, first byte is the low order byte
+            generatedSnd[idx++] = (byte) (val & 0x00ff);
+            generatedSnd[idx++] = (byte) ((val & 0xff00) >>> 8);
+        }
+    }
+
+    private void playSound() {
+        final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
+                sampleRate, AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT, generatedSnd.length,
+                AudioTrack.MODE_STATIC);
+        audioTrack.write(generatedSnd, 0, generatedSnd.length);
+        audioTrack.play();
+    }
+
 }
